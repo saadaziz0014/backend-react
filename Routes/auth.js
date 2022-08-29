@@ -41,9 +41,43 @@ router.post(
       res.json({token});
     } catch (err) {
       console.error(err.message);
-      res.status(400).send("Error occured");
+      res.status(500).send("Error occured");
     }
   }
 );
 
+//login
+router.post(
+  "/login",
+  [
+    body("email", "enter valid email").isEmail(),
+    body("password", "").exists()
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    const {email,password} = req.body;
+    try {
+      let user = await User.findOne({email});
+      if(!user){
+        res.status(400).json({error:"Enter Correct Mail"});
+      }
+      let comparePass = await bcrypt.compare(password,user.password);
+      if(!comparePass){
+        res.status(400).json({error:"Enter Correct Password"});
+      }
+      const data = {
+        user:{
+          id: user.id
+        }
+      }
+      const token = jwt.sign(data,secretC);
+      res.json({token});
+    } catch (err) {
+      //console.error(err.message);
+    res.status(500).json({err:"Server Error occured"});
+    }
+  });
 module.exports = router;
